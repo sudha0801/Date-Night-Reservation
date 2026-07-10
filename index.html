@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Date Night Reservation❤️</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" href="DNR.ico" type="image/x-icon" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Great+Vibes&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="background">
+      <div class="gradient"></div>
+      <div class="floating-hearts">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- LANDING PAGE -->
+      <section id="landingPage" class="page active">
+        <div class="glass-card landing-card">
+          <div class="heart-logo">❤️</div>
+          <h1>Date Night Reservation</h1>
+          <p class="subtitle">
+            Distance means so little when someone means so much.
+          </p>
+          <p>
+            Choose your date and let's make memories together. Every moment with
+            you is a treasure, and I can't wait to create more special memories
+            with you.❤️
+          </p>
+          <div
+            style="
+              display: flex;
+              gap: 15px;
+              justify-content: center;
+              margin-top: 20px;
+            "
+          >
+            <button id="startBooking" class="primary-btn">Book Our Date</button>
+            <button id="viewLogBtn" class="secondary-btn">
+              View Scheduled Dates
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESERVATION DATABASE / LOG PAGE -->
+      <section id="logPage" class="page">
+        <div class="glass-card large-card">
+          <h2>Scheduled Dates ❤️</h2>
+          <p>Here are our upcoming special dates together.</p>
+          <div class="table-responsive">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Activity Details</th>
+                  <th>Food & Order</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="logTableBody">
+                <!-- Injected dynamically by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          <div class="navigation">
+            <button id="backToLandingFromLog" class="secondary-btn">
+              ← Back to Home
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- DATE PAGE -->
+      <section id="datePage" class="page">
+        <div class="glass-card">
+          <div class="step">Step 1 of 4</div>
+          <h2>Choose Our Date</h2>
+          <p>Pick whichever day makes you happiest.</p>
+          <div class="calendar-wrapper">
+            <div class="calendar-header">
+              <button id="prevMonth">❮</button>
+              <h3 id="monthYear">Month</h3>
+              <button id="nextMonth">❯</button>
+            </div>
+            <div class="calendar-days">
+              <div>M</div>
+              <div>T</div>
+              <div>W</div>
+              <div>T</div>
+              <div>F</div>
+              <div>S</div>
+              <div>S</div>
+            </div>
+            <div id="calendar" class="calendar-grid"></div>
+          </div>
+          <div class="navigation">
+            <button id="backToLanding" class="secondary-btn">Back</button>
+            <button id="toTime" class="primary-btn">Next →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TIME PAGE -->
+      <section id="timePage" class="page">
+        <div class="glass-card">
+          <div class="step">Step 2 of 4</div>
+          <h2>Choose a Time</h2>
+          <div id="timeGrid" class="time-grid"></div>
+          <div class="navigation">
+            <button id="backToDate" class="secondary-btn">← Back</button>
+            <button id="toActivity" class="primary-btn">Next →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTIVITY PAGE -->
+      <section id="activityPage" class="page">
+        <div class="glass-card large-card">
+          <div class="step">Step 3 of 4</div>
+          <h2>Choose Our Activity</h2>
+          <p>
+            Select your favorite category below. New dropdown selections appear
+            as you make your choice ❤️
+          </p>
+
+          <!-- Dynamic Cascading Dropdown Area Container -->
+          <div class="activity-layout" id="dynamicDropdownContainer"></div>
+
+          <div class="food-box">
+            <label class="checkbox-label food-question">
+              <input type="checkbox" id="wantFood" /> Would you like food with
+              this date?
+            </label>
+            <div id="foodOptions" class="food-options hidden">
+              <div class="food-checkboxes">
+                <label class="checkbox-label"
+                  ><input type="checkbox" class="foodChoice" value="KFC" />
+                  KFC</label
+                >
+                <label class="checkbox-label"
+                  ><input
+                    type="checkbox"
+                    class="foodChoice"
+                    value="McDonald's"
+                  />
+                  McDonald's</label
+                >
+                <label class="checkbox-label"
+                  ><input
+                    type="checkbox"
+                    class="foodChoice"
+                    value="Chicken Lickin"
+                  />
+                  Chicken Lickin</label
+                >
+                <label class="checkbox-label"
+                  ><input type="checkbox" class="foodChoice" value="Nando's" />
+                  Nando's</label
+                >
+                <label class="checkbox-label"
+                  ><input
+                    type="checkbox"
+                    class="foodChoice"
+                    value="Chicken Tikka"
+                  />
+                  Chicken Tikka</label
+                >
+                <label class="checkbox-label"
+                  ><input
+                    type="checkbox"
+                    class="foodChoice"
+                    value="Mochachos"
+                  />
+                  Mochachos</label
+                >
+                <label class="checkbox-label"
+                  ><input
+                    type="checkbox"
+                    class="foodChoice"
+                    value="Burger King"
+                  />
+                  Burger King</label
+                >
+                <label class="checkbox-label"
+                  ><input
+                    type="checkbox"
+                    class="foodChoice"
+                    id="foodOther"
+                    value="Other"
+                  />
+                  Other</label
+                >
+              </div>
+              <input
+                type="text"
+                id="customFood"
+                class="hidden"
+                placeholder="What would you like?"
+              />
+              <div class="order-box">
+                <label>What would you like to order?</label>
+                <textarea
+                  id="order"
+                  placeholder="Type whatever you feel like eating❤️"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="navigation">
+            <button id="backToTime" class="secondary-btn">← Back</button>
+            <button id="toReview" class="primary-btn">Review Booking →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- REVIEW BOOKING -->
+      <section id="reviewPage" class="page">
+        <div class="glass-card review-card">
+          <div class="step">Step 4 of 4</div>
+          <h2>Review Your Booking ❤️</h2>
+          <p>Double check everything before sending your reservation.</p>
+          <div class="summary">
+            <div class="summary-row">
+              <span>Date & Time</span><strong id="summaryDateTime"></strong>
+            </div>
+            <div class="summary-row">
+              <span>Selected Activity Sequence</span
+              ><strong id="summaryActivityDetails"></strong>
+            </div>
+            <div class="summary-row">
+              <span>Food Choice</span><strong id="summaryFood"></strong>
+            </div>
+            <div class="summary-row">
+              <span>Order Note</span><strong id="summaryOrder"></strong>
+            </div>
+          </div>
+          <div class="notes">
+            <label>Special message for me ❤️</label>
+            <textarea
+              id="loveMessage"
+              placeholder="Write anything you'd like me to know..."
+            ></textarea>
+          </div>
+          <div class="navigation">
+            <button id="editBooking" class="secondary-btn">Edit Details</button>
+            <button id="confirmBooking" class="primary-btn">
+              Confirm Reservation ❤️
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- LOADING -->
+      <section id="loadingPage" class="page">
+        <div class="glass-card loading-card">
+          <div class="heart-loader">❤️</div>
+          <h2>Confirming Plans...</h2>
+          <div class="loader"></div>
+        </div>
+      </section>
+
+      <!-- SUCCESS -->
+      <section id="successPage" class="page">
+        <div class="glass-card success-card">
+          <div class="success-heart">💖</div>
+          <h1 id="successHeadline">Reservation Confirmed</h1>
+          <p id="successSubline">
+            Your date night has officially been processed and documented.
+          </p>
+          <div class="ticket">
+            <h3>Date Night Reservation</h3>
+            <div class="ticket-line"></div>
+            <p>📅 <span id="ticketDate"></span></p>
+            <p>🕒 <span id="ticketTime"></span></p>
+            <p>🎁 <span id="ticketActivity"></span></p>
+          </div>
+          <p class="ending-message">
+            No matter how many kilometres separate us... I'll always choose you.
+            Every single time. ❤️
+          </p>
+          <button id="newBooking" class="primary-btn">Go to Dashboard</button>
+        </div>
+      </section>
+    </div>
+
+    <audio id="bgMusic" loop>
+      <source src="music.mp3" type="audio/mpeg" />
+    </audio>
+    <div id="sparkles"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+    <script>
+      emailjs.init("JTliMjMgq1aMmgyyI");
+    </script>
+
+    <script src="activities.js"></script>
+    <script src="script.js"></script>
+    <div id="toastContainer"></div>
+    <div id="confirmModal" class="confirm-overlay hidden">
+      <div class="confirm-card glass-card">
+        <div class="confirm-icon">💔</div>
+
+        <h2 id="confirmTitle">Cancel Date?</h2>
+
+        <p id="confirmMessage"></p>
+
+        <div class="confirm-buttons">
+          <button id="confirmNo" class="secondary-btn">Keep Our Date ❤️</button>
+
+          <button id="confirmYes" class="primary-btn">Yes, Cancel It</button>
+        </div>
+      </div>
+    </div>
+    <div id="reasonModal" class="confirm-overlay hidden">
+      <div class="glass-card confirm-card">
+        <div class="confirm-icon">✏️</div>
+
+        <h2 id="reasonTitle">Reason Required</h2>
+
+        <p id="reasonMessage">Please tell me why.</p>
+
+        <textarea
+          id="reasonInput"
+          placeholder="Enter your reason..."
+        ></textarea>
+
+        <div class="confirm-buttons">
+          <button id="reasonCancel" class="secondary-btn">Cancel</button>
+
+          <button id="reasonConfirm" class="primary-btn">Continue</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
