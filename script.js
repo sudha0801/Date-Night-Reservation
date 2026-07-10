@@ -114,7 +114,8 @@ function showToast(type, title, message) {
 // Global Email Configurations
 const APP_CONFIG = {
   USER_EMAIL: "datenightreservation0801@gmail.com",
-  RECIPIENT_EMAIL: "sudharshanmoodley946@gmail.com",
+  RECIPIENT_EMAIL1: "sudharshanmoodley946@gmail.com",
+  RECIPIENT_EMAIL2: "sudharshanmoodley6@gmail.com",
   EMAILJS_SERVICE_ID: "service_m8n1hse",
   EMAILJS_CONFIRM_TEMPLATE: "template_b31fft9",
   EMAILJS_UPDATE_TEMPLATE: "template_3zrcvei",
@@ -546,21 +547,22 @@ document.getElementById("toReview").onclick = () => {
 =========================================================*/
 document.getElementById("confirmBooking").onclick = async () => {
   const templateParams = {
-    to_email: APP_CONFIG.RECIPIENT_EMAIL,
-    from_email: APP_CONFIG.USER_EMAIL,
+  to_email_1: APP_CONFIG.RECIPIENT_EMAIL1,
+  to_email_2: APP_CONFIG.RECIPIENT_EMAIL2,
 
-    booking_date: booking.date,
-    booking_time: booking.time,
+  from_email: APP_CONFIG.USER_EMAIL,
 
-    activity: booking.activitySelections.join(" → "),
+  booking_date: booking.date,
+  booking_time: booking.time,
 
-    food: booking.food || "None",
+  activity: booking.activitySelections.join(" → "),
 
-    order: booking.order || "N/A",
+  food: booking.food || "None",
 
-    message: booking.message || "No message provided.",
-  };
+  order: booking.order || "N/A",
 
+  message: booking.message || "No message provided.",
+};
   if (editingId !== null) {
     const editReason = await showReasonPrompt(
       "Update Reservation",
@@ -730,6 +732,9 @@ window.deleteLogRecord = async function (id) {
   localStorage.setItem("dateNightDB", JSON.stringify(database));
 
   const templateParams = {
+    to_email_1: APP_CONFIG.RECIPIENT_EMAIL1,
+    to_email_2: APP_CONFIG.RECIPIENT_EMAIL2,
+
     header_icon: "❌",
 
     action: "Cancelled",
@@ -737,7 +742,6 @@ window.deleteLogRecord = async function (id) {
     status_message: "Your reservation has been cancelled.",
 
     old_booking_date: targetRecord.date,
-
     old_booking_time: targetRecord.time,
 
     old_activity: targetRecord.activitySelections.join(" → "),
@@ -747,19 +751,16 @@ window.deleteLogRecord = async function (id) {
     old_order: targetRecord.order || "N/A",
 
     booking_date: "-",
-
     booking_time: "-",
 
     activity: "-",
-
     food: "-",
-
     order: "-",
 
     reason: deleteReason,
 
     message: "Hopefully we can arrange another date soon ❤️",
-  };
+};
 
   emailjs
     .send(
