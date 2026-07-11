@@ -114,8 +114,7 @@ function showToast(type, title, message) {
 // Global Email Configurations
 const APP_CONFIG = {
   USER_EMAIL: "datenightreservation0801@gmail.com",
-  RECIPIENT_EMAIL1: "sudharshanmoodley946@gmail.com",
-  RECIPIENT_EMAIL2: "sudharshanmoodley6@gmail.com",
+  RECIPIENT_EMAIL: "sudharshanmoodley946@gmail.com",
   EMAILJS_SERVICE_ID: "service_m8n1hse",
   EMAILJS_CONFIRM_TEMPLATE: "template_b31fft9",
   EMAILJS_UPDATE_TEMPLATE: "template_3zrcvei",
@@ -134,8 +133,127 @@ let booking = {
 
 let editingId = null; // Tracks if we are editing an existing record
 
-// Mock Database Initialization using localStorage
-let database = JSON.parse(localStorage.getItem("dateNightDB")) || [];
+/*=========================================================
+   0. SHARED TEXT-FILE DATABASE (GitHub-backed)
+   Reservations live in a plain text file (reservations.txt,
+   one JSON object per line) inside the GitHub repo. Every
+   add/edit/delete reads the latest copy, changes it, then
+   writes the whole file back via the GitHub Contents API,
+   so both of you always see the same list.
+=========================================================*/
+const GITHUB_CONFIG = {
+  owner: "sudha0801",
+  repo: "Date-Night-Reservation",
+  branch: "main",
+  path: "reservations.txt",
+  // Fine-grained token, scoped to ONLY this repo, Contents: Read and write.
+  // Anyone who views this file's source can see this token, so keep its
+  // scope this narrow and regenerate it if the repo is ever forked/shared.
+  token:
+    "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",
+};
+
+let database = []; // In-memory mirror of reservations.txt
+let dbFileSha = null; // Needed by GitHub's API to update the file safely
+
+function encodeBase64Unicode(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function decodeBase64Unicode(str) {
+  return decodeURIComponent(escape(atob(str)));
+}
+
+// Reads reservations.txt fresh from GitHub and rebuilds `database` from it.
+async function fetchDatabaseFile() {
+  const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}?ref=${GITHUB_CONFIG.branch}&t=${Date.now()}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/vnd.github+json" },
+      cache: "no-store",
+    });
+
+    if (res.status === 404) {
+      // File doesn't exist yet — first-ever reservation will create it.
+      database = [];
+      dbFileSha = null;
+      return database;
+    }
+
+    if (!res.ok) throw new Error(`GitHub read failed: ${res.status}`);
+
+    const data = await res.json();
+    dbFileSha = data.sha;
+
+    const content = decodeBase64Unicode(data.content.replace(/\n/g, ""));
+
+    database = content
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null; // skip any corrupted line rather than crash
+        }
+      })
+      .filter(Boolean);
+
+    return database;
+  } catch (err) {
+    console.error("Failed to load reservations.txt:", err);
+    showToast(
+      "error",
+      "Couldn't Load Dates",
+      "Failed to load the shared reservation log. Showing local data only.",
+    );
+    return database;
+  }
+}
+
+// Writes the entire in-memory `database` array back to reservations.txt.
+async function saveDatabaseFile(commitMessage) {
+  const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+  const content =
+    database.map((item) => JSON.stringify(item)).join("\n") + "\n";
+
+  const body = {
+    message: commitMessage || "Update reservations log",
+    content: encodeBase64Unicode(content),
+    branch: GITHUB_CONFIG.branch,
+  };
+  if (dbFileSha) body.sha = dbFileSha;
+
+  const headers = {
+    Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${GITHUB_CONFIG.token}`,
+    "Content-Type": "application/json",
+  };
+
+  let res = await fetch(url, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 409) {
+    // Someone else's save landed first — refetch the latest sha and retry once.
+    await fetchDatabaseFile();
+    body.sha = dbFileSha;
+    res = await fetch(url, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(body),
+    });
+  }
+
+  if (!res.ok) throw new Error(`GitHub save failed: ${res.status}`);
+
+  const data = await res.json();
+  dbFileSha = data.content.sha;
+}
 
 // Page Reference Handlers
 const pages = document.querySelectorAll(".page");
@@ -153,9 +271,12 @@ document.getElementById("startBooking").onclick = () => {
   editingId = null;
   showPage(datePage);
 };
-document.getElementById("viewLogBtn").onclick = () => {
-  renderLogTable();
+document.getElementById("viewLogBtn").onclick = async () => {
   showPage(logPage);
+  const tbody = document.getElementById("logTableBody");
+  tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading scheduled dates...</td></tr>`;
+  await fetchDatabaseFile();
+  renderLogTable();
 };
 document.getElementById("backToLandingFromLog").onclick = () =>
   showPage(landingPage);
@@ -546,23 +667,26 @@ document.getElementById("toReview").onclick = () => {
    5. RESERVATION PERSISTENCE (CONFIRM / INSERT / EDIT)
 =========================================================*/
 document.getElementById("confirmBooking").onclick = async () => {
+  // Pull the latest shared copy first so we don't overwrite a change
+  // the other person just made from their own device.
+  await fetchDatabaseFile();
+
   const templateParams = {
-  to_email_1: APP_CONFIG.RECIPIENT_EMAIL1,
-  to_email_2: APP_CONFIG.RECIPIENT_EMAIL2,
+    to_email: APP_CONFIG.RECIPIENT_EMAIL,
+    from_email: APP_CONFIG.USER_EMAIL,
 
-  from_email: APP_CONFIG.USER_EMAIL,
+    booking_date: booking.date,
+    booking_time: booking.time,
 
-  booking_date: booking.date,
-  booking_time: booking.time,
+    activity: booking.activitySelections.join(" → "),
 
-  activity: booking.activitySelections.join(" → "),
+    food: booking.food || "None",
 
-  food: booking.food || "None",
+    order: booking.order || "N/A",
 
-  order: booking.order || "N/A",
+    message: booking.message || "No message provided.",
+  };
 
-  message: booking.message || "No message provided.",
-};
   if (editingId !== null) {
     const editReason = await showReasonPrompt(
       "Update Reservation",
@@ -627,7 +751,23 @@ document.getElementById("confirmBooking").onclick = async () => {
       "A confirmation notification has been filed.";
   }
   showPage(loadingPage);
-  localStorage.setItem("dateNightDB", JSON.stringify(database));
+
+  try {
+    await saveDatabaseFile(
+      editingId !== null
+        ? `Update reservation ${editingId}`
+        : `Add reservation ${booking.id}`,
+    );
+  } catch (err) {
+    console.error(err);
+    showToast(
+      "error",
+      "Save Failed",
+      "Couldn't write to the shared reservations file. Please try again.",
+    );
+    showPage(reviewPage);
+    return;
+  }
 
   const templateID =
     editingId !== null
@@ -702,6 +842,8 @@ function renderLogTable() {
 }
 
 window.deleteLogRecord = async function (id) {
+  await fetchDatabaseFile();
+
   const targetRecord = database.find((item) => item.id === id);
   if (!targetRecord) return;
 
@@ -729,12 +871,22 @@ window.deleteLogRecord = async function (id) {
   showPage(loadingPage);
 
   database = database.filter((item) => item.id !== id);
-  localStorage.setItem("dateNightDB", JSON.stringify(database));
+
+  try {
+    await saveDatabaseFile(`Delete reservation ${id}`);
+  } catch (err) {
+    console.error(err);
+    showToast(
+      "error",
+      "Delete Failed",
+      "Couldn't write to the shared reservations file. Please try again.",
+    );
+    renderLogTable();
+    showPage(logPage);
+    return;
+  }
 
   const templateParams = {
-    to_email_1: APP_CONFIG.RECIPIENT_EMAIL1,
-    to_email_2: APP_CONFIG.RECIPIENT_EMAIL2,
-
     header_icon: "❌",
 
     action: "Cancelled",
@@ -742,6 +894,7 @@ window.deleteLogRecord = async function (id) {
     status_message: "Your reservation has been cancelled.",
 
     old_booking_date: targetRecord.date,
+
     old_booking_time: targetRecord.time,
 
     old_activity: targetRecord.activitySelections.join(" → "),
@@ -751,16 +904,19 @@ window.deleteLogRecord = async function (id) {
     old_order: targetRecord.order || "N/A",
 
     booking_date: "-",
+
     booking_time: "-",
 
     activity: "-",
+
     food: "-",
+
     order: "-",
 
     reason: deleteReason,
 
     message: "Hopefully we can arrange another date soon ❤️",
-};
+  };
 
   emailjs
     .send(
