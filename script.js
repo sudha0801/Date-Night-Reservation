@@ -159,7 +159,7 @@ const WORKER_CONFIG = {
   // "https://date-night-reservations.yoursubdomain.workers.dev/reservations"
   url: "https://date-night-reservations.sudharshanmoodley946.workers.dev/reservations",
   // Must match the SITE_KEY secret you set in the Worker's dashboard.
-  siteKey: "PASTE_YOUR_SITE_KEY_HERE",
+  siteKey: "123we5szxthcyg8hobiu908875ersxdfcgvhijk54e3wraedxtgyh7livhknkmmvc4e4cs5rt",
 };
 
 let database = []; // In-memory mirror of reservations.txt
