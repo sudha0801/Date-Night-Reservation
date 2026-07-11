@@ -149,8 +149,7 @@ const GITHUB_CONFIG = {
   // Fine-grained token, scoped to ONLY this repo, Contents: Read and write.
   // Anyone who views this file's source can see this token, so keep its
   // scope this narrow and regenerate it if the repo is ever forked/shared.
-  token:
-    "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",
+  token: "PASTE_YOUR_FINE_GRAINED_TOKEN_HERE",
 };
 
 let database = []; // In-memory mirror of reservations.txt
@@ -276,6 +275,7 @@ document.getElementById("viewLogBtn").onclick = async () => {
   const tbody = document.getElementById("logTableBody");
   tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading scheduled dates...</td></tr>`;
   await fetchDatabaseFile();
+  await pruneExpiredReservations();
   renderLogTable();
 };
 document.getElementById("backToLandingFromLog").onclick = () =>
@@ -317,6 +317,55 @@ const monthNames = [
   "November",
   "December",
 ];
+
+/*=========================================================
+   0b. EXPIRED RESERVATION CLEANUP
+   Reservation dates are stored like "12 July 2026" and times
+   like "18:00". This turns that pair into a real Date so it
+   can be compared against right now, and removes anything
+   whose date AND time have both already passed.
+=========================================================*/
+function parseReservationDateTime(item) {
+  if (!item || !item.date || !item.time) return null;
+
+  const dateParts = item.date.split(" ");
+  if (dateParts.length !== 3) return null;
+
+  const [day, monthName, year] = dateParts;
+  const monthIndex = monthNames.indexOf(monthName);
+  if (monthIndex === -1) return null;
+
+  const timeParts = item.time.split(":").map(Number);
+  if (timeParts.length !== 2 || timeParts.some(Number.isNaN)) return null;
+  const [hours, minutes] = timeParts;
+
+  const dt = new Date(Number(year), monthIndex, Number(day), hours, minutes);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+// Removes reservations whose date & time are both in the past, and,
+// if anything was actually removed, writes the trimmed list back to
+// reservations.txt so the change is reflected for both of you.
+async function pruneExpiredReservations() {
+  const now = new Date();
+  const beforeCount = database.length;
+
+  database = database.filter((item) => {
+    const dt = parseReservationDateTime(item);
+    if (!dt) return true; // Can't confidently parse it — leave it alone
+    return dt.getTime() >= now.getTime();
+  });
+
+  if (database.length !== beforeCount) {
+    try {
+      await saveDatabaseFile("Remove expired reservations");
+    } catch (err) {
+      console.error("Failed to remove expired reservations:", err);
+      // Not shown as a toast — this runs quietly in the background,
+      // and a failed cleanup isn't worth interrupting the user over.
+    }
+  }
+}
 let systemDate = new Date();
 let currentMonth = systemDate.getMonth();
 let currentYear = systemDate.getFullYear();
@@ -1010,7 +1059,7 @@ function createHeart() {
 }
 setInterval(createHeart, 1800);
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
   resetBooking();
 
   document.getElementById("dynamicDropdownContainer").innerHTML = "";
@@ -1018,6 +1067,10 @@ window.addEventListener("load", () => {
   document
     .querySelectorAll(".calendar-day.selected, .time-slot.selected")
     .forEach((el) => el.classList.remove("selected"));
+
+  // Clear out any reservations whose date & time have already passed.
+  await fetchDatabaseFile();
+  await pruneExpiredReservations();
 });
 
 function showReasonPrompt(title, message) {
