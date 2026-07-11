@@ -134,133 +134,70 @@ let booking = {
 let editingId = null; // Tracks if we are editing an existing record
 
 /*=========================================================
-   0. SHARED TEXT-FILE DATABASE (GitHub-backed)
+   0. SHARED TEXT-FILE DATABASE (via Cloudflare Worker)
    Reservations live in a plain text file (reservations.txt,
-   one JSON object per line) inside the GitHub repo. Every
-   add/edit/delete reads the latest copy, changes it, then
-   writes the whole file back via the GitHub Contents API,
-   so both of you always see the same list.
+   one JSON object per line) inside the GitHub repo. The
+   browser never talks to GitHub directly — it calls a small
+   Cloudflare Worker, which holds the GitHub token as a
+   server-side secret and does the actual read/write. That
+   keeps the token out of this public repo entirely.
 =========================================================*/
-const GITHUB_CONFIG = {
-  owner: "sudha0801",
-  repo: "Date-Night-Reservation",
-  branch: "main",
-  path: "reservations.txt",
-  // Fine-grained token, scoped to ONLY this repo, Contents: Read and write.
-  // Anyone who views this file's source can see this token, so keep its
-  // scope this narrow and regenerate it if the repo is ever forked/shared.
-  token: "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",
+const WORKER_CONFIG = {
+  // Your Worker's URL + /reservations, e.g.
+  // "https://date-night-reservations.yoursubdomain.workers.dev/reservations"
+  url: "https://date-night-reservations.sudharshanmoodley946.workers.dev/reservations",
+  // Must match the SITE_KEY secret you set in the Worker's dashboard.
+  siteKey: "123we5szxthcyg8hobiu908875ersxdfcgvhijk54e3wraedxtgyh7livhknkmmvc4e4cs5rt",
 };
 
 let database = []; // In-memory mirror of reservations.txt
-let dbFileSha = null; // Needed by GitHub's API to update the file safely
 
-function encodeBase64Unicode(str) {
-  return btoa(unescape(encodeURIComponent(str)));
-}
-
-function decodeBase64Unicode(str) {
-  return decodeURIComponent(escape(atob(str)));
-}
-
-// Reads reservations.txt fresh from GitHub and rebuilds `database` from it.
+// Reads reservations.txt fresh (via the Worker) and rebuilds `database`.
 async function fetchDatabaseFile() {
-  const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}?ref=${GITHUB_CONFIG.branch}&t=${Date.now()}`;
-
   try {
-    const res = await fetch(url, {
-      headers: { Accept: "application/vnd.github+json" },
+    const res = await fetch(WORKER_CONFIG.url, {
+      headers: { "X-Site-Key": WORKER_CONFIG.siteKey },
       cache: "no-store",
     });
 
-    if (res.status === 404) {
-      // File doesn't exist yet — first-ever reservation will create it.
-      database = [];
-      dbFileSha = null;
-      return database;
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Worker read failed: ${res.status}`);
     }
 
-    if (!res.ok) throw new Error(`GitHub read failed: ${res.status}`);
-
     const data = await res.json();
-    dbFileSha = data.sha;
-
-    const content = decodeBase64Unicode(data.content.replace(/\n/g, ""));
-
-    database = content
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return null; // skip any corrupted line rather than crash
-        }
-      })
-      .filter(Boolean);
-
+    database = Array.isArray(data.reservations) ? data.reservations : [];
     return database;
   } catch (err) {
-    console.error("Failed to load reservations.txt:", err);
+    console.error("Failed to load reservations:", err);
     showToast(
       "error",
       "Couldn't Load Dates",
-      "Failed to load the shared reservation log. Showing local data only.",
+      `Failed to load the shared reservation log: ${err.message}`,
     );
     return database;
   }
 }
 
-// Writes the entire in-memory `database` array back to reservations.txt.
+// Writes the entire in-memory `database` array back to reservations.txt
+// (via the Worker, which handles the GitHub commit itself).
 async function saveDatabaseFile(commitMessage) {
-  const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-  const content =
-    database.map((item) => JSON.stringify(item)).join("\n") + "\n";
-
-  const body = {
-    message: commitMessage || "Update reservations log",
-    content: encodeBase64Unicode(content),
-    branch: GITHUB_CONFIG.branch,
-  };
-  if (dbFileSha) body.sha = dbFileSha;
-
-  const headers = {
-    Accept: "application/vnd.github+json",
-    Authorization: `Bearer ${GITHUB_CONFIG.token}`,
-    "Content-Type": "application/json",
-  };
-
-  let res = await fetch(url, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify(body),
+  const res = await fetch(WORKER_CONFIG.url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Site-Key": WORKER_CONFIG.siteKey,
+    },
+    body: JSON.stringify({
+      reservations: database,
+      message: commitMessage || "Update reservations log",
+    }),
   });
 
-  if (res.status === 409) {
-    // Someone else's save landed first — refetch the latest sha and retry once.
-    await fetchDatabaseFile();
-    body.sha = dbFileSha;
-    res = await fetch(url, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify(body),
-    });
-  }
-
   if (!res.ok) {
-    let reason = `status ${res.status}`;
-    try {
-      const errData = await res.json();
-      if (errData && errData.message) reason = errData.message;
-    } catch {
-      // response wasn't JSON — stick with the status code
-    }
-    throw new Error(`GitHub save failed: ${reason}`);
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Worker save failed: ${res.status}`);
   }
-
-  const data = await res.json();
-  dbFileSha = data.content.sha;
 }
 
 // Page Reference Handlers
@@ -821,7 +758,7 @@ document.getElementById("confirmBooking").onclick = async () => {
     showToast(
       "error",
       "Save Failed",
-      `Couldn't write to the shared reservations file: ${err.message}`,
+      "Couldn't write to the shared reservations file. Please try again.",
     );
     showPage(reviewPage);
     return;
@@ -937,7 +874,7 @@ window.deleteLogRecord = async function (id) {
     showToast(
       "error",
       "Delete Failed",
-      `Couldn't write to the shared reservations file: ${err.message}`,
+      "Couldn't write to the shared reservations file. Please try again.",
     );
     renderLogTable();
     showPage(logPage);
