@@ -248,7 +248,16 @@ async function saveDatabaseFile(commitMessage) {
     });
   }
 
-  if (!res.ok) throw new Error(`GitHub save failed: ${res.status}`);
+  if (!res.ok) {
+    let reason = `status ${res.status}`;
+    try {
+      const errData = await res.json();
+      if (errData && errData.message) reason = errData.message;
+    } catch {
+      // response wasn't JSON — stick with the status code
+    }
+    throw new Error(`GitHub save failed: ${reason}`);
+  }
 
   const data = await res.json();
   dbFileSha = data.content.sha;
@@ -812,7 +821,7 @@ document.getElementById("confirmBooking").onclick = async () => {
     showToast(
       "error",
       "Save Failed",
-      "Couldn't write to the shared reservations file. Please try again.",
+      `Couldn't write to the shared reservations file: ${err.message}`,
     );
     showPage(reviewPage);
     return;
@@ -928,7 +937,7 @@ window.deleteLogRecord = async function (id) {
     showToast(
       "error",
       "Delete Failed",
-      "Couldn't write to the shared reservations file. Please try again.",
+      `Couldn't write to the shared reservations file: ${err.message}`,
     );
     renderLogTable();
     showPage(logPage);
