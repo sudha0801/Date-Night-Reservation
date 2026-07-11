@@ -80,6 +80,18 @@ const dropdownHeadings = {
   },
 };
 
+// Strips emoji from a string (used only on activitySelections before they're
+// written to the shared reservations file — the emoji still show everywhere
+// else in the app, like the review page and confirmation email).
+function stripEmojis(str) {
+  if (!str) return str;
+  return str
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/[\u200D\uFE0F]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function showToast(type, title, message) {
   const icons = {
     success: "💖",
@@ -147,7 +159,7 @@ const WORKER_CONFIG = {
   // "https://date-night-reservations.yoursubdomain.workers.dev/reservations"
   url: "https://date-night-reservations.sudharshanmoodley946.workers.dev/reservations",
   // Must match the SITE_KEY secret you set in the Worker's dashboard.
-  siteKey: "123we5szxthcyg8hobiu908875ersxdfcgvhijk54e3wraedxtgyh7livhknkmmvc4e4cs5rt",
+  siteKey: "PASTE_YOUR_SITE_KEY_HERE",
 };
 
 let database = []; // In-memory mirror of reservations.txt
@@ -728,6 +740,7 @@ document.getElementById("confirmBooking").onclick = async () => {
 
     database[index] = {
       ...booking,
+      activitySelections: booking.activitySelections.map(stripEmojis),
       id: editingId,
     };
 
@@ -739,7 +752,10 @@ document.getElementById("confirmBooking").onclick = async () => {
   } else {
     // Normal Insert Routine
     booking.id = Date.now();
-    database.push({ ...booking });
+    database.push({
+      ...booking,
+      activitySelections: booking.activitySelections.map(stripEmojis),
+    });
     document.getElementById("successHeadline").textContent =
       "Reservation Confirmed!";
     document.getElementById("successSubline").textContent =
