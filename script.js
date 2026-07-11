@@ -149,7 +149,7 @@ const GITHUB_CONFIG = {
   // Fine-grained token, scoped to ONLY this repo, Contents: Read and write.
   // Anyone who views this file's source can see this token, so keep its
   // scope this narrow and regenerate it if the repo is ever forked/shared.
-  token: "PASTE_YOUR_FINE_GRAINED_TOKEN_HERE",
+  token: "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",
 };
 
 let database = []; // In-memory mirror of reservations.txt
